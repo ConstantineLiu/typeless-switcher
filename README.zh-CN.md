@@ -4,7 +4,7 @@
 
 [English](README.md) | 简体中文
 
-> 本项目 fork 自 **Kartone** 的 [estarpro1022/typeless-reset-device](https://github.com/estarpro1022/typeless-reset-device)（MIT 协议）。设备重置、逆向出的 API 调用和导出/导入工具都来自上游项目；本 fork 新增了一键迁移脚本、邮箱自动登录和 Gmail 验证码自动获取。详见[致谢](#致谢)。
+> 设备重置、逆向出的 API 调用和导出/导入工具基于 **Kartone** 的 [estarpro1022/typeless-reset-device](https://github.com/estarpro1022/typeless-reset-device)（MIT 协议）。本项目在此基础上新增了一键迁移、首次登录、邮箱自动登录和 Gmail 验证码自动获取。详见[致谢](#致谢)。
 
 > [!IMPORTANT]
 > **支持的平台与邮箱**
@@ -64,6 +64,20 @@ uv sync                                           # 安装 Python 依赖
    security add-generic-password -s "typeless-reset-gmail" -a "you@gmail.com" -w "<16 位应用专用密码>"
    ```
 
+**第一次使用（Typeless 还没登录任何账号）**
+
+这时没有账号可以导出，脚本会跳过导出和词典导入，直接登录你的第一个别名（`y.o.u.rname@gmail.com`）。它需要知道你的 Gmail 地址，有两种给法：
+
+```bash
+# 交互式：脚本会在终端里问你 Gmail 地址
+bash reset-and-migrate.sh
+
+# 非交互式，比如由其他脚本或 AI Agent 调用：把地址作为参数传入
+bash reset-and-migrate.sh you@gmail.com
+```
+
+在非交互环境里既没传地址、也没法提问时，脚本会直接报错并给出用法，不会卡在那里等输入。
+
 **每次换号时**，先确认 Typeless 登录着当前账号，然后运行：
 
 ```bash
@@ -74,15 +88,15 @@ bash reset-and-migrate.sh
 
 | 步骤 | 内容 |
 |------|------|
-| 预检 | 读取当前账号邮箱，推出对应的 Gmail 收件箱，检查钥匙串配置。缺什么就在这里停下，此时还没有做任何改动 |
-| 1 | 把词典、数据库、录音和设置导出到 `backup_<时间戳>/` |
+| 预检 | 确定 Gmail 收件箱，检查钥匙串配置。缺什么就在这里停下，此时还没有做任何改动 |
+| 1 | 把词典、数据库、录音和设置导出到 `backup_<时间戳>/`（第一次使用时跳过） |
 | 2 | 退出 Typeless |
 | 3 | 重置 Device ID，清除本地登录态（移到废纸篓，可以恢复） |
 | 4 | 选出下一个没用过的 Gmail 点号别名，在干净的 Chrome 会话里网页登录，从 Gmail 取验证码并填入，把 `typeless://` 回调交给 app |
-| 5 | 把词典导入新账号，并把全部历史记录改归新账号 |
+| 5 | 把词典导入新账号（第一次使用时跳过），并把本地全部历史记录改归新账号 |
 | 6 | 重启 Typeless |
 
-设置 `GMAIL_USER=you@gmail.com` 可以覆盖脚本推出来的收件箱地址。
+Gmail 地址的取值顺序是：命令行参数 → `GMAIL_USER` 环境变量 → 当前登录的账号 → 在终端里提问。地址里的点号会自动去掉，所以 `y.ou@gmail.com` 和 `you@gmail.com` 会被当成同一个收件箱。
 
 ### 方式二：手动流程
 
@@ -103,7 +117,7 @@ Gmail 会忽略地址里的点号，所以 `you@gmail.com`、`y.ou@gmail.com`、
 
 - 从 3 个点（`MIN_DOTS`）起步，第一个是把点加在最前面：`y.o.u.rname@gmail.com`
 - 同样点数的方案按字典序排；用完了再用 4 个点、5 个点，依此类推，1 个点和 2 个点的方案排在最后
-- `backup_*/` 里记录过的别名会自动跳过；全部用完时脚本报错停下，不会重复使用
+- 每个登录成功的别名都会记进 `used_aliases.txt`，这里面和 `backup_*/` 里出现过的别名都会跳过。所以新用户一定从 `y.o.u.rname` 开始；某个别名用过了，就自动往后挪一个。全部用完时脚本报错停下，不会重复使用
 
 别名的数量取决于 Gmail 用户名（`@` 前面去掉点号的部分）的长度。*n* 个字符之间有 *n − 1* 个空位可以插点，一共有 2^(n−1) − 1 个别名。脚本会自动读取你的地址长度，不需要额外配置：
 

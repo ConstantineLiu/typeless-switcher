@@ -3,8 +3,8 @@
 """
 [INPUT]: 依赖 playwright 的 sync_api (驱动本机 Google Chrome, 每次全新临时配置, 等同无痕);
          依赖 gmail_code 的 get_password / watch_codes / setup_hint
-[OUTPUT]: next_alias(email, used) 按固定顺序算下一个未用过的 Gmail 点号别名 (从 3 个点起), used_emails() 读备份里的历史邮箱;
-          命令行 web_login.py <email>: 网页邮箱登录 → 自动填 Gmail 验证码 → 把 typeless:// 回调交给 app
+[OUTPUT]: next_alias(email, used) 按固定顺序算下一个未用过的 Gmail 点号别名 (从 3 个点起), used_emails() 读登录记录 used_aliases.txt 与备份里的历史邮箱;
+          命令行 web_login.py <email>: 网页邮箱登录 → 自动填 Gmail 验证码 → 把 typeless:// 回调交给 app, 并记入 used_aliases.txt
 [POS]: typeless-reset-device 的登录自动化, 被 reset-and-migrate.sh 第 4 步调用
 [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 
@@ -58,11 +58,16 @@ def alias_order(n):
         yield from combinations(range(1, n), k)
 
 
+HERE = Path(__file__).parent
+USED_LOG = HERE / "used_aliases.txt"   # every alias that signed in successfully
+
+
 def used_emails():
-    """历次备份记录的账号邮箱。"""
-    here = Path(__file__).parent
-    return {json.loads(p.read_text())["backup_email"]
-            for p in here.glob("backup_*/dictionary_backup.json")}
+    """登录成功过的别名 (USED_LOG) + 历次备份记录的账号邮箱。"""
+    logged = USED_LOG.read_text().split() if USED_LOG.exists() else []
+    backed = [json.loads(p.read_text())["backup_email"]
+              for p in HERE.glob("backup_*/dictionary_backup.json")]
+    return {*logged, *backed}
 
 
 def next_alias(email, used=()):
@@ -133,6 +138,8 @@ def main():
 
     print(f"      截到回调 {url.split('?')[0]}, 交给 Typeless")
     subprocess.run(["open", url], check=True)
+    with USED_LOG.open("a") as f:
+        f.write(sys.argv[1] + "\n")
     return 0
 
 

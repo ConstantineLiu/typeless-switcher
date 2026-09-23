@@ -4,7 +4,7 @@
 
 English | [简体中文](README.zh-CN.md)
 
-> This project is a fork of [estarpro1022/typeless-reset-device](https://github.com/estarpro1022/typeless-reset-device) by **Kartone**, released under the MIT License. The device reset, the reverse-engineered API client and the export/import tools come from that project. This fork adds a one-click migration script, automated email sign-in, and Gmail verification-code retrieval. See [Credits](#credits).
+> The device reset, the reverse-engineered API client and the export/import tools are based on [estarpro1022/typeless-reset-device](https://github.com/estarpro1022/typeless-reset-device) by **Kartone** (MIT License). This project adds one-click migration, first-run sign-in, automated email sign-in and Gmail verification-code retrieval. See [Credits](#credits).
 
 > [!IMPORTANT]
 > **Supported platforms and mailboxes**
@@ -64,6 +64,20 @@ uv sync                                           # install Python dependencies
    security add-generic-password -s "typeless-reset-gmail" -a "you@gmail.com" -w "<16-character app password>"
    ```
 
+**First run (Typeless is not signed in yet)**
+
+There is no account to export from, so the script skips export and dictionary import and signs straight in to your first alias (`y.o.u.rname@gmail.com`). It needs your Gmail address, which you can provide in either of two ways:
+
+```bash
+# Interactive: the script asks for your Gmail address
+bash reset-and-migrate.sh
+
+# Non-interactive, e.g. when run by a script or an AI agent: pass the address as an argument
+bash reset-and-migrate.sh you@gmail.com
+```
+
+In a non-interactive shell with no address given, the script exits with a usage message instead of waiting for input.
+
 **Each time you switch accounts**, make sure Typeless is signed in to the current account, then run:
 
 ```bash
@@ -74,15 +88,15 @@ What it does:
 
 | Step | Action |
 |------|--------|
-| Preflight | Reads the current account email, derives your Gmail inbox from it, and checks that the Keychain entry exists. If anything is missing, it stops here, before any change is made. |
-| 1 | Exports the dictionary, database, recordings and settings to `backup_<timestamp>/` |
+| Preflight | Determines your Gmail inbox and checks that the Keychain entry exists. If anything is missing, it stops here, before any change is made. |
+| 1 | Exports the dictionary, database, recordings and settings to `backup_<timestamp>/` (skipped on first run) |
 | 2 | Quits Typeless |
 | 3 | Resets the Device ID and clears the local sign-in state (moved to the Trash, so it can be restored) |
 | 4 | Picks the next unused Gmail dot alias, signs in on the web in a clean Chrome session, reads the code from Gmail, enters it, and passes the `typeless://` callback to the app |
-| 5 | Imports the dictionary into the new account and reassigns all history to it |
+| 5 | Imports the dictionary into the new account (skipped on first run) and reassigns all local history to it |
 | 6 | Restarts Typeless |
 
-Set `GMAIL_USER=you@gmail.com` to override the inbox that the script derives.
+The Gmail address is taken from, in order: the command-line argument, the `GMAIL_USER` environment variable, the currently signed-in account, and finally an interactive prompt. Dots are removed automatically, so `y.ou@gmail.com` and `you@gmail.com` are treated as the same inbox.
 
 ### Option B: manual workflow
 
@@ -103,7 +117,7 @@ Gmail ignores dots in the local part, so `you@gmail.com`, `y.ou@gmail.com` and `
 
 - It starts with 3 dots (`MIN_DOTS`) placed at the beginning: `y.o.u.rname@gmail.com`
 - Within each dot count, placements are in lexicographic order. When those run out, it moves to 4 dots, then 5, and so on. 1- and 2-dot placements come last.
-- Aliases already recorded in `backup_*/` are skipped. The script stops with an error once every alias has been used, instead of reusing one.
+- Every alias that signs in successfully is recorded in `used_aliases.txt`, and aliases found there or in `backup_*/` are skipped. So a new user always starts at `y.o.u.rname`, and if an alias has been used before, the script moves on to the next one. It stops with an error once every alias has been used, instead of reusing one.
 
 The number of aliases depends on the length of your Gmail username (the part before `@`, without dots). A name of *n* characters has *n − 1* gaps, so it has 2^(n−1) − 1 aliases in total. The script reads the length from your address automatically, so no configuration is needed:
 

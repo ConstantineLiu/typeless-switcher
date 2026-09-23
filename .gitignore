@@ -7,3 +7,5 @@ uv.lock
 backup*
 .DS_Store
 web_login_debug.png
+used_aliases.txt
+fullbackup_*/
