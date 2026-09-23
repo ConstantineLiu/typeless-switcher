@@ -19,6 +19,10 @@ NOW="$HOME/Library/Application Support/now.typeless.desktop"
 # ---------------------------------------------------------------------------
 # Preflight: everything that can fail without side effects fails here
 # ---------------------------------------------------------------------------
+[ -f "$TS/user-data.json" ] || {
+  echo "错误: Typeless 当前没有登录账号。请先在 app 里登录要被替换的旧账号, 再重跑本脚本" >&2
+  exit 1
+}
 OLD_EMAIL=$(uv run python3 -c "from crypto_utils import decrypt_user_data; print(decrypt_user_data()['email'])")
 OLD_LOCAL=${OLD_EMAIL%@*}
 export GMAIL_USER="${GMAIL_USER:-${OLD_LOCAL//./}@${OLD_EMAIL#*@}}"
