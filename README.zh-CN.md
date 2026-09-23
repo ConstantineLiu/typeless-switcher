@@ -35,6 +35,7 @@ The number of users logged into this device has exceeded the limit.
 | `reset-and-migrate.sh` | 一条命令跑完「导出 → 重置 → 登录新账号 → 导入」 |
 | `web_login.py` | 在干净的 Chrome 会话里用邮箱登录 Typeless，自动填验证码，再把登录态交回 app |
 | `gmail_code.py` | 通过 IMAP 从 Gmail 读取 Typeless 验证码（也可以单独使用） |
+| `verify.py` | 迁移完成后做检查，通过了才删除备份 |
 
 ## 环境要求
 
@@ -95,6 +96,7 @@ bash reset-and-migrate.sh
 | 4 | 选出下一个没用过的 Gmail 点号别名，在干净的 Chrome 会话里网页登录，从 Gmail 取验证码并填入，把 `typeless://` 回调交给 app |
 | 5 | 把词典导入新账号（第一次使用时跳过），并把本地全部历史记录改归新账号 |
 | 6 | 重启 Typeless |
+| 7 | 验证结果：app 登录的是新别名、服务器接受这个登录、备份里的词汇都在新账号里、本地没有历史记录还属于别的账号。全部通过才把本次备份移到废纸篓；任何一项不通过，脚本就停下并保留备份 |
 
 Gmail 地址的取值顺序是：命令行参数 → `GMAIL_USER` 环境变量 → 当前登录的账号 → 在终端里提问。地址里的点号会自动去掉，所以 `y.ou@gmail.com` 和 `you@gmail.com` 会被当成同一个收件箱。
 
@@ -188,6 +190,7 @@ app 上的 "Sign in with email" 按钮会在浏览器里打开 `https://www.type
 ├── reset-and-migrate.sh    # 一键迁移
 ├── web_login.py            # 邮箱自动登录 + 别名选择
 ├── gmail_code.py           # Gmail IMAP 验证码读取
+├── verify.py               # 迁移后验证
 ├── reset-device-macos.sh   # 重置 Device ID
 ├── export.py               # 导出词典、数据库、录音、设置
 ├── import.py               # 导入到新账号

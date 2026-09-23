@@ -35,6 +35,7 @@ This repository provides:
 | `reset-and-migrate.sh` | One command that runs export → reset → sign in to a new account → import |
 | `web_login.py` | Signs in to Typeless by email in a clean Chrome session, fills in the verification code, and hands the session back to the app |
 | `gmail_code.py` | Reads Typeless verification codes from Gmail over IMAP (also usable on its own) |
+| `verify.py` | Checks a finished migration before its backup is removed |
 
 ## Requirements
 
@@ -95,6 +96,7 @@ What it does:
 | 4 | Picks the next unused Gmail dot alias, signs in on the web in a clean Chrome session, reads the code from Gmail, enters it, and passes the `typeless://` callback to the app |
 | 5 | Imports the dictionary into the new account (skipped on first run) and reassigns all local history to it |
 | 6 | Restarts Typeless |
+| 7 | Verifies the result: the app is signed in to the new alias, the server accepts that session, every backed-up dictionary word is in the new account, and no local history still belongs to another account. Only if every check passes is this run's backup moved to the Trash; if any check fails, the script stops and keeps the backup. |
 
 The Gmail address is taken from, in order: the command-line argument, the `GMAIL_USER` environment variable, the currently signed-in account, and finally an interactive prompt. Dots are removed automatically, so `y.ou@gmail.com` and `you@gmail.com` are treated as the same inbox.
 
@@ -188,6 +190,7 @@ format    = [16-byte IV] + ':' + [AES-256-CBC ciphertext]
 ├── reset-and-migrate.sh    # one-click migration
 ├── web_login.py            # automated email sign-in + alias selection
 ├── gmail_code.py           # Gmail IMAP verification-code reader
+├── verify.py               # post-migration checks
 ├── reset-device-macos.sh   # Device ID reset
 ├── export.py               # export dictionary, database, recordings, settings
 ├── import.py               # import into a new account

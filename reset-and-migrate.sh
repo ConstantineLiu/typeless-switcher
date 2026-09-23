@@ -10,7 +10,7 @@
 # 说明: 新账号邮箱 = 按固定顺序取下一个没用过的 Gmail 点号别名 (见 web_login.py next_alias),
 #       脚本开一个全新配置的 Chrome 走网页邮箱登录, 自动从 Gmail 取码填入,
 #       再把 typeless:// 回调交给 app。全程无需手动操作。
-#       删除操作全部走 trash(进废纸篓, 可恢复)。
+#       删除操作全部走 trash(进废纸篓, 可恢复)。迁移成功后本次备份也移到废纸篓, 失败则保留。
 #
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -44,22 +44,22 @@ security find-generic-password -s "typeless-reset-gmail" -a "$GMAIL_USER" > /dev
 
 BACKUP=""
 if [ "$LOGGED_IN" = 1 ]; then
-  echo "[1/6] 导出当前账号数据..."
+  echo "[1/7] 导出当前账号数据..."
   uv run python3 export.py
   BACKUP=$(ls -dt backup_*/ | head -1)
   echo "      备份目录: $BACKUP"
 else
-  echo "[1/6] 没有登录账号, 跳过导出"
+  echo "[1/7] 没有登录账号, 跳过导出"
 fi
 
-echo "[2/6] 退出 Typeless..."
+echo "[2/7] 退出 Typeless..."
 osascript -e 'quit app "Typeless"' 2>/dev/null || true
 for _ in $(seq 1 10); do
   pgrep -f "Typeless.app" > /dev/null 2>&1 || break
   sleep 0.5
 done
 
-echo "[3/6] 重置设备码 (trash 方式, 可从废纸篓恢复)..."
+echo "[3/7] 重置设备码 (trash 方式, 可从废纸篓恢复)..."
 [ -f "$NOW/device.cache" ] && trash "$NOW/device.cache" || true
 security delete-generic-password \
   -s "now.typeless.desktop.deviceIdentifier" \
@@ -81,7 +81,7 @@ if [ -f "$TS/app-storage.json" ]; then
 fi
 
 NEW_EMAIL=$(uv run python3 -c "from web_login import next_alias, used_emails; print(next_alias('$OLD_EMAIL', used_emails()))")
-echo "[4/6] 网页登录新账号 $NEW_EMAIL (旧: $OLD_EMAIL)..."
+echo "[4/7] 网页登录新账号 $NEW_EMAIL (旧: $OLD_EMAIL)..."
 open /Applications/Typeless.app
 uv run python3 web_login.py "$NEW_EMAIL"
 
@@ -103,7 +103,7 @@ while True:
     time.sleep(2)
 PYEOF
 
-echo "[5/6] 导入词汇 + 迁移历史记录..."
+echo "[5/7] 导入词汇 + 迁移历史记录..."
 NEW_UID=$(uv run python3 -c "from crypto_utils import decrypt_user_data; print(decrypt_user_data()['user_id'])")
 if [ -n "$BACKUP" ]; then
   # 防呆: 新账号和备份是同一账号时中止
@@ -123,8 +123,16 @@ sqlite3 "$TS/typeless.db" "
   UPDATE history_v2 SET user_id = '$NEW_UID' WHERE user_id IS NOT NULL AND user_id != '$NEW_UID';
 "
 
-echo "[6/6] 重启 Typeless..."
+echo "[6/7] 重启 Typeless..."
 open /Applications/Typeless.app
 
+echo "[7/7] 验证新账号, 全部通过才删除本次备份..."
+# Any failed check exits here (set -e), so the backup survives a bad migration
+uv run python3 verify.py "$NEW_EMAIL" "$BACKUP"
+if [ "$LOGGED_IN" = 1 ]; then
+  grep -qxF "$OLD_EMAIL" used_aliases.txt 2>/dev/null || echo "$OLD_EMAIL" >> used_aliases.txt
+  trash "$BACKUP"
+fi
+
 echo ""
-echo "完成! 当前账号 $NEW_EMAIL, 本地全部历史记录已归属新账号${BACKUP:+, 词汇已导入, 备份在 $BACKUP}"
+echo "完成! 当前账号 $NEW_EMAIL, 本地全部历史记录已归属新账号${BACKUP:+, 词汇已导入, 本次备份已移到废纸篓}"
