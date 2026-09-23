@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.uv/
+uv.lock
+.python-version
+backup*
+.DS_Store
+web_login_debug.png

@@ -1,0 +1,10 @@
+[project]
+name = "typeless-switcher"
+version = "0.1.0"
+description = "Reset the Typeless device ID on macOS and migrate data between accounts"
+requires-python = ">=3.13"
+dependencies = [
+    "playwright==1.58.0",
+    "pycryptodome>=3.23.0",
+    "requests>=2.33.1",
+]
